@@ -5,7 +5,7 @@ from google import genai
 import argparse
 from google.genai import types
 from prompts import system_prompt
-from call_function import available_functions
+from call_function import available_functions, call_function
 
 def main():
     load_dotenv()
@@ -44,8 +44,26 @@ def main():
     if not response.function_calls:
         print("Response:", response.text)
     else:
+        function_responses = []
         for function_call in response.function_calls:
-            print (f"Calling function: {function_call.name}({function_call.args})")
+
+            function_call_result = call_function(function_call, args.verbose)
+
+            if not function_call_result.parts:
+                raise RuntimeError("Function call result does not contain parts")
+
+            if function_call_result.parts[0].function_response is None:
+                raise RuntimeError("Function call result part does not contain function response")  
+             
+            if not function_call_result.parts[0].function_response.response:
+                raise RuntimeError("Function call result part does not contain response field")
             
+            function_responses.append(function_call_result.parts[0])
+
+            if args.verbose:
+                print(f"-> {function_call_result.parts[0].function_response.response}")
+
+
 if __name__ == "__main__":
     main()
+
